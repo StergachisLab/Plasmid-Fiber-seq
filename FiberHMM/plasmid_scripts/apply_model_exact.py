@@ -22,7 +22,7 @@ def options():
         elif o == '-f' or o == '--infiles':
             infiles = a.split(',')
         elif o == '-e' or o == '--context':
-            context = a
+            context = os.path.realpath(a)
         elif o == '-m' or o == '--model':
             model = a
     return indir, infiles, context, model
@@ -36,14 +36,17 @@ def encode_me(rid, read, read_info, context):
     me = me[1:-1]
     me = me.astype(int)
     # check that the start is at the start of the chromosome
-    start = 0
-    end = 6462
+    start = read_info.loc[rid, 'start']
+    end = read_info.loc[rid, 'end']
     # mask out the methylations from an array for nonmethylated positions
     no_me = np.arange(end-start)
     no_me = np.delete(no_me, me)
     hexamers = pd.read_hdf(context, key=chrom, start=start, stop=end)
     me_encode = hexamers.to_numpy().T[0]
     no_me_encode = me_encode+4097
+    # Filter me and no_me
+    no_me = no_me[np.where(no_me < (me_encode.shape)[0])]
+    me = me[np.where(me < (no_me_encode.shape)[0])]
     # mask each other
     me_encode[no_me] = 0
     no_me_encode[me] = 0
@@ -119,13 +122,16 @@ def apply_model(model, f, indir, outdir, context):
                 if len(combined) > 0:
                     combined = unpack(combined)
                 else:
-                    combined = np.zeros(6462)+6462
+                    combined = np.zeros(
+                        len(pd.read_hdf(context, key=chrom)))+len(pd.read_hdf(context, key=chrom))
 
-                combined = combined[6462:6462*2]
+                combined = combined[len(pd.read_hdf(context, key=chrom)):len(
+                    pd.read_hdf(context, key=chrom))*2]
 
                 # this is because there were issues with reads with no footprints at all, again a slightly hacky fix. can again just sub in the chromosome length or just discard reads with NaNs after the fact
-                if len(combined) < 6462:
-                    combined = [-6462]*6462
+                if len(combined) < len(pd.read_hdf(context, key=chrom)):
+                    combined = [-len(pd.read_hdf(context, key=chrom))] * \
+                        len(pd.read_hdf(context, key=chrom))
                 fp_dic[rid] = combined
 
             i += 1
@@ -152,7 +158,7 @@ indir, infiles, context, model = options()
 
 inpq = indir+'/Infiles/parquet/'
 inref = indir+'/Reference/'
-context = inref+context
+context = context
 outdir = indir+'/Outfiles/'
 
 
