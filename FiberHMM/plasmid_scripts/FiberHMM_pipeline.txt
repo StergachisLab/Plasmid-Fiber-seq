@@ -1,0 +1,15 @@
+1. Run aligned and sorted bam files through pyft_sort notebook
+	- This seperates out plasmid and genomic reads, and sorts plasmid reads by nucleosomes count
+
+2. Extract m6a bed files from nucleosome count sorted bams and place them in the bed folder of their designated hmm folder
+	- Eg. place m6a.bed files in Gus_WT_rep1 --> Infiles --> Bed
+
+3. Ensure that the accessible and inaccessible probability files are in the References folder, along with the pickled model file and the reference.h5 file
+
+4. Run prep_bed script
+
+5. Run apply_model_circular script
+	- There are two scripts. apply_model_circular_exact is for m6a files that came from a bam file that only contains reads of the exact plasmid length. apply_model_circular is for m6a files that came from bam files with +/- 100bp buffer for plasmid read lengths
+
+
+6. Analyze data using the basic-plots-pol-II jupyter notebook
