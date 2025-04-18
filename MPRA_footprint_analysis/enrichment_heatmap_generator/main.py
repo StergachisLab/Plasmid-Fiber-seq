@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+"""
+Grouped Heatmap Generator for SNP Footprint Analysis with Multiprocessing
+
+This script processes BED files containing SNP data, groups them by position,
+and creates comparison heatmaps for each position group in a single PDF.
+Multiprocessing is used to accelerate data processing and plotting.
+"""
+
+import os
+import sys
+import argparse
+import time
+import traceback
+
+def parse_arguments():
+    """Parse command-line arguments for the script."""
+    parser = argparse.ArgumentParser(description="Generate grouped heatmaps for SNP footprint analysis.")
+    
+    # Required arguments
+    parser.add_argument("--input-dir", required=True, 
+                        help="Directory containing BED files to process")
+    parser.add_argument("--control-pkl", required=True, 
+                        help="Path to the pickled control dataframe")
+    parser.add_argument("--null-means-pkl", required=True, 
+                        help="Path to the pickled dictionary with means of null distributions")
+    parser.add_argument("--null-stds-pkl", required=True, 
+                        help="Path to the pickled dictionary with standard deviations of null distributions")
+    parser.add_argument("--output-dir", required=True, 
+                        help="Directory where the output plots will be saved")
+    
+    # Optional arguments
+    parser.add_argument("--metadata-pkl", 
+                        help="Path to the pickled metadata with dimension information")
+    parser.add_argument("--ref-seq-length", type=int, default=4718, 
+                        help="Length of the reference sequence")
+    parser.add_argument("--row-min", type=int, default=1, 
+                        help="Minimum row value for the range")
+    parser.add_argument("--row-max", type=int, default=400, 
+                        help="Maximum row value for the range")
+    parser.add_argument("--col-min", type=int, default=3000, 
+                        help="Minimum column value for the range")
+    parser.add_argument("--col-max", type=int, default=3600, 
+                        help="Maximum column value for the range")
+    parser.add_argument("--bin-size", type=int, default=10, 
+                        help="Bin size for footprint sizes")
+    parser.add_argument("--vmin", type=float, default=2, 
+                        help="Minimum value for the heatmap color scale")
+    parser.add_argument("--vmax", type=float, default=10, 
+                        help="Maximum value for the heatmap color scale")
+    parser.add_argument("--xticks", type=int, default=50, 
+                        help="Interval for x-axis ticks")
+    parser.add_argument("--cmap", default="magma", 
+                        help="Colormap for the heatmap")
+    parser.add_argument("--plot-wt", action="store_true", 
+                        help="Plot WT enrichment (default is variant)")
+    parser.add_argument("--plot-both", action="store_true", 
+                        help="Plot both WT and variant enrichment")
+    parser.add_argument("--processes", type=int, default=None,
+                        help="Number of processes to use for parallel processing")
+    parser.add_argument("--no-mp", action="store_true",
+                        help="Disable multiprocessing and use sequential processing")
+    parser.add_argument("--tsv-file", 
+                        help="Path to a TSV file with log2-FC values to display in the plots")
+    parser.add_argument("--min-coverage", type=int, default=None,
+                        help="Minimum number of reads required to process a BED file")
+    parser.add_argument("--apply-fdr", action="store_true",
+                        help="Apply Benjamini-Hochberg FDR correction to p-values")
+    parser.add_argument("--fdr-threshold", type=float, default=0.05,
+                        help="FDR threshold for significance (default: 0.05)")
+    
+    return parser.parse_args()
+
+def main():
+    """Main function to execute the script."""
+    start_time = time.time()
+    print("Grouped Heatmap Generator for SNP Footprint Analysis")
+    print("---------------------------------------------------")
+    
+    # Parse command-line arguments
+    args = parse_arguments()
+    
+    # Import the process_and_plot_grouped_samples function
+    from footprint_analysis.utils.helpers import process_and_plot_grouped_samples
+    
+    # Set plot_index based on --plot-wt flag
+    plot_index = 0 if args.plot_wt else 1
+    
+    # Process data and create plots
+    process_and_plot_grouped_samples(
+        input_directory=args.input_dir,
+        control_pickle_path=args.control_pkl,
+        null_means_dict_path=args.null_means_pkl,
+        null_stds_dict_path=args.null_stds_pkl,
+        output_directory=args.output_dir,
+        tsv_file_path=args.tsv_file,
+        metadata_path=args.metadata_pkl,
+        ref_seq_length=args.ref_seq_length,
+        row_range=(args.row_min, args.row_max),
+        col_range=(args.col_min, args.col_max),
+        bin_size=args.bin_size,
+        vmin=args.vmin,
+        vmax=args.vmax,
+        xticks=args.xticks,
+        cmap=args.cmap,
+        plot_index=plot_index,
+        plot_both=args.plot_both,
+        n_processes=args.processes,
+        use_multiprocessing=not args.no_mp,
+        min_coverage=args.min_coverage,
+        apply_fdr=args.apply_fdr,
+        fdr_threshold=args.fdr_threshold
+    )
+    
+    total_time = time.time() - start_time
+    print(f"Script execution completed in {total_time:.2f} seconds.")
+
+if __name__ == "__main__":
+    main()
