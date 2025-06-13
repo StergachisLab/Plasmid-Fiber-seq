@@ -16,12 +16,9 @@ def setup_logging(verbose=False):
     Set up logging configuration.
     
     Parameters:
-    verbose (bool): If True, set logging level to DEBUG, otherwise INFO.
+    verbose (bool): If True, set logging level to DEBUG, otherwise WARNING.
     """
-    if verbose:
-        level = logging.DEBUG
-    else:
-        level = logging.CRITICAL + 1  # disables all logging output
+    level = logging.DEBUG if verbose else logging.WARNING
     logging.basicConfig(
         level=level,
         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -148,7 +145,9 @@ def calculate_methylation_percentage(fiber):
     
     # Handle edge case where there are no A or T bases
     if at_count == 0:
-        logging.debug(f"Read {fiber.query_name} has no A or T bases, setting methylation to 0%")
+        # Safely get read name for logging (handle case where query_name might not exist)
+        read_name = getattr(fiber, 'query_name', 'unknown')
+        logging.debug(f"Read {read_name} has no A or T bases, setting methylation to 0%")
         return 0.0
     
     # Calculate methylation percentage
@@ -240,6 +239,11 @@ def filter_by_m6a(input_bam_path, output_bam_path, chromosomes=None, methylation
     except Exception as e:
         logging.error(f"Error during BAM filtering: {e}")
         raise
+    
+    finally:
+        # Clean up resources - pyft objects are automatically cleaned up when they go out of scope
+        # No explicit close() methods are available for Fiberbam and Fiberwriter objects
+        logging.debug("Cleaning up resources (automatic cleanup for pyft objects)")
 
     # Calculate and log final statistics
     if total_reads > 0:
@@ -250,72 +254,210 @@ def filter_by_m6a(input_bam_path, output_bam_path, chromosomes=None, methylation
         logging.info(f"  Filter pass rate: {pass_percentage:.2f}%")
         
         # Print summary for user (in addition to logging)
-        print(f'Total reads = {total_reads:,}')
-        print(f'Reads passing filter = {reads_written:,}')
-        print(f'Percentage of reads passing filter = {pass_percentage:.2f}%')
+        print(f'Total reads = {total_reads:,}, Reads passing filter = {reads_written:,}, '
+              f'percentage of reads passing filter = {pass_percentage:.2f}%')
     
     return total_reads, reads_written
 
 
-def add_command_to_header(bam_path, command, make_optional=True):
+def create_command_info(args, chromosomes_list):
     """
-    Opens the BAM file using pysam and adds a tag to the header with the command used to filter the reads.
+    Create comprehensive command information including defaults for header tracking.
+    
+    Parameters:
+    args: Parsed command line arguments
+    chromosomes_list: Processed list of chromosomes (can be None)
+    
+    Returns:
+    str: Formatted command information showing all parameters used
+    """
+    import datetime
+    import getpass
+    import socket
+    
+    # Start with the original command as entered
+    original_command = ' '.join(sys.argv)
+    
+    # Create detailed parameter information
+    param_info = []
+    
+    # Input/Output files (use basename for privacy/brevity)
+    param_info.append(f"input={Path(args.input_bam_path).name}")
+    param_info.append(f"output={Path(args.output_bam_path).name}")
+    
+    # Methylation range (show whether default or custom)
+    if args.methylation_range == [0.1, 1.0]:
+        param_info.append(f"methylation_range=0.1-1.0 (default)")
+    else:
+        param_info.append(f"methylation_range={args.methylation_range[0]}-{args.methylation_range[1]} (custom)")
+    
+    # Chromosomes (show whether all or filtered)
+    if chromosomes_list is None:
+        param_info.append("chromosomes=all (default)")
+    else:
+        chrom_str = ','.join(chromosomes_list[:3])  # Show first 3 chromosomes
+        if len(chromosomes_list) > 3:
+            chrom_str += f"... ({len(chromosomes_list)} total)"
+        param_info.append(f"chromosomes={chrom_str} (filtered)")
+    
+    # Flags
+    flags = []
+    if args.verbose:
+        flags.append("verbose")
+    if args.skip_header:
+        flags.append("skip_header")
+    else:
+        flags.append("enhanced_header")
+    
+    if flags:
+        param_info.append(f"flags={','.join(flags)}")
+    else:
+        param_info.append("flags=none")
+    
+    # Add execution metadata
+    try:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        param_info.append(f"timestamp={timestamp}")
+    except:
+        pass
+    
+    try:
+        username = getpass.getuser()
+        param_info.append(f"user={username}")
+    except:
+        pass
+    
+    try:
+        hostname = socket.gethostname()
+        param_info.append(f"host={hostname}")
+    except:
+        pass
+    
+    # Combine original command with parameter details
+    detailed_info = f"{original_command} | PARAMS: {'; '.join(param_info)}"
+    
+    return detailed_info
+
+
+def add_command_to_header_samtools(bam_path, command_info, make_optional=True):
+    """
+    Use samtools reheader to modify BAM header - much faster than manual rewriting.
     
     Parameters:
     bam_path (str): Path to the BAM file to modify
-    command (str): Command line string to add to header
+    command_info (str): Detailed command information including parameters to add to header
     make_optional (bool): If True, continue even if header modification fails
     """
     try:
-        logging.info("Adding command to BAM header")
+        logging.info("Adding command to BAM header using samtools reheader")
         
-        # Create temporary file path
+        # Create temporary paths
+        temp_header_path = str(Path(bam_path).with_suffix('.temp_header.sam'))
         temp_output_path = str(Path(bam_path).with_suffix('.temp.bam'))
         
-        # Read the existing header
-        with pysam.AlignmentFile(bam_path, "rb") as bam_file:
-            header = bam_file.header.to_dict()
-
-        # Ensure 'PG' (program) section exists in the header
-        if 'PG' not in header:
-            header['PG'] = []
-
-        # Create a unique program ID to avoid conflicts
-        pg_id = 'm6a_filter'
+        # Extract current header
+        result = subprocess.run([
+            "samtools", "view", "-H", bam_path
+        ], capture_output=True, text=True, check=True)
         
-        # Add the new command to the 'PG' section
-        header['PG'].append({
-            'ID': pg_id,
-            'PN': 'filter_by_m6a.py',  # Program name
-            'VN': '1.0',              # Version
-            'CL': command             # Command line
-        })
-
-        # Write new BAM file with updated header
-        with pysam.AlignmentFile(temp_output_path, "wb", header=header) as out_bam:
-            with pysam.AlignmentFile(bam_path, "rb") as bam_file:
-                for read in bam_file:
-                    out_bam.write(read)
-
-        # Replace original file with the updated BAM file
+        current_header = result.stdout
+        
+        # Parse and modify header
+        header_lines = current_header.strip().split('\n')
+        
+        # Generate unique PG ID
+        existing_pg_ids = []
+        for line in header_lines:
+            if line.startswith('@PG\tID:'):
+                # Extract ID from @PG line
+                for field in line.split('\t'):
+                    if field.startswith('ID:'):
+                        existing_pg_ids.append(field[3:])
+                        break
+        
+        # Create unique PG ID
+        base_id = 'm6a_filter'
+        pg_id = base_id
+        counter = 1
+        while pg_id in existing_pg_ids:
+            pg_id = f"{base_id}_{counter}"
+            counter += 1
+        
+        # Create new PG line with comprehensive information
+        # Escape any problematic characters in command_info for SAM format
+        escaped_command = command_info.replace('\t', ' ').replace('\n', ' ')
+        new_pg_line = f"@PG\tID:{pg_id}\tPN:filter_by_m6a.py\tVN:1.0\tCL:{escaped_command}"
+        
+        # Insert new PG line in the correct location (after existing @PG lines, or before @CO lines)
+        modified_lines = []
+        pg_added = False
+        
+        # Track where we are in the header structure
+        past_sq_lines = False
+        past_rg_lines = False
+        
+        for line in header_lines:
+            # Check if we've passed the @SQ and @RG sections
+            if line.startswith('@SQ'):
+                past_sq_lines = True
+            elif line.startswith('@RG'):
+                past_rg_lines = True
+            elif line.startswith('@CO') and not pg_added:
+                # Insert before @CO lines if we haven't added PG yet
+                modified_lines.append(new_pg_line)
+                pg_added = True
+            elif line.startswith('@PG'):
+                # Add our PG line after the last existing @PG line
+                modified_lines.append(line)
+                if not pg_added:
+                    modified_lines.append(new_pg_line)
+                    pg_added = True
+                continue
+            elif past_sq_lines and past_rg_lines and not line.startswith(('@PG', '@CO')) and not pg_added:
+                # If we're past @SQ and @RG but haven't seen @PG or @CO, add our PG line here
+                modified_lines.append(new_pg_line)
+                pg_added = True
+            
+            modified_lines.append(line)
+        
+        # If we still haven't added the PG line, add it at the end
+        if not pg_added:
+            modified_lines.append(new_pg_line)
+        
+        # Write modified header to temp file
+        with open(temp_header_path, 'w') as f:
+            f.write('\n'.join(modified_lines) + '\n')
+        
+        # Use samtools reheader (faster than manual BAM rewriting)
+        with open(temp_output_path, 'wb') as outfile:
+            subprocess.run([
+                "samtools", "reheader", temp_header_path, bam_path
+            ], stdout=outfile, check=True)
+        
+        # Replace original file atomically
         os.replace(temp_output_path, bam_path)
         
-        # Generate index for the new BAM file
-        logging.info("Indexing output BAM file")
-        pysam.index(bam_path)
+        # Regenerate index
+        logging.info("Regenerating BAM index")
+        subprocess.run(["samtools", "index", bam_path], check=True)
         
-        logging.info("Successfully updated BAM header and created index")
+        # Clean up temp files
+        if os.path.exists(temp_header_path):
+            os.remove(temp_header_path)
+        
+        logging.info("Successfully updated BAM header using samtools reheader")
         
     except Exception as e:
-        # Clean up temporary file if it exists
-        if os.path.exists(temp_output_path):
-            try:
-                os.remove(temp_output_path)
-            except:
-                pass
+        # Clean up temp files on error
+        for temp_file in [temp_header_path, temp_output_path]:
+            if 'temp_file' in locals() and os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except:
+                    pass
         
         if make_optional:
-            logging.warning(f"Failed to update BAM header (continuing anyway): {e}")
+            logging.warning(f"Failed to update BAM header using samtools reheader: {e}")
         else:
             logging.error(f"Failed to update BAM header: {e}")
             raise
@@ -348,9 +490,9 @@ def main():
                         help="Methylation percentage range (default: 0.1 to 1.0). "
                              "Values should be between 0 and 1.")
 
-    # Optional argument to skip header modification
+    # Optional argument to skip enhanced header modification
     parser.add_argument("--skip_header", action='store_true',
-                        help="Skip adding command information to BAM header (faster for large files).")
+                        help="Skip adding enhanced command information to BAM header (basic info may still be added by pyft).")
 
     # Optional argument for verbose logging
     parser.add_argument("--verbose", "-v", action='store_true',
@@ -381,9 +523,6 @@ def main():
         validate_inputs(args.input_bam_path, args.output_bam_path, 
                        args.methylation_range, chromosomes_list)
 
-        # Capture the full command-line input as a string for header
-        command_line_input = ' '.join(sys.argv)
-
         # Run the filter_by_m6a function
         total_reads, reads_written = filter_by_m6a(
             args.input_bam_path, 
@@ -392,11 +531,17 @@ def main():
             methylation_range=args.methylation_range
         )
 
-        # Add the command-line input to the BAM header (unless skipped)
+        # Add enhanced command information to the BAM header (unless skipped)
         if not args.skip_header and reads_written > 0:
-            add_command_to_header(args.output_bam_path, command_line_input, make_optional=True)
-        elif args.skip_header:
-            logging.info("Skipped BAM header modification as requested")
+            # Create comprehensive command information for header tracking
+            command_info = create_command_info(args, chromosomes_list)
+            # Add filtering results to command info
+            pass_rate = (reads_written / total_reads) * 100 if total_reads > 0 else 0
+            command_info_with_stats = f"{command_info} | RESULTS: total_reads={total_reads:,}; passed={reads_written:,}; pass_rate={pass_rate:.2f}%"
+            add_command_to_header_samtools(args.output_bam_path, command_info_with_stats, make_optional=True)
+            logging.info("Added comprehensive command information to BAM header")
+        else:
+            logging.info("Skipped enhanced BAM header modification (basic info may still be added by pyft)")
         
         # Final success message
         if reads_written > 0:
