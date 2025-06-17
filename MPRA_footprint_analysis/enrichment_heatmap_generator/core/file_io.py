@@ -16,8 +16,7 @@ def read_ft_data(directory_path):
     """
     Read all BED files in a directory into a dictionary.
     
-    Note: This is a placeholder function that should be implemented 
-    based on the FiberHMM_functions module referenced in the original script.
+    This uses the FiberHMM_functions.read_ft_data function directly.
     
     Parameters:
     -----------
@@ -29,8 +28,15 @@ def read_ft_data(directory_path):
     dict
         Dictionary mapping sample names to BED dataframes
     """
-    # Implementation required based on FiberHMM_functions.py
-    raise NotImplementedError("This function needs to be implemented based on FiberHMM_functions module")
+    # Ensure FiberHMM_functions is available
+    from .fiberhmm_integration import ensure_fiberhmm_in_path
+    ensure_fiberhmm_in_path()
+    
+    # Import the actual function from FiberHMM_functions
+    import FiberHMM_functions as fhmm
+    
+    # The function signatures match perfectly
+    return fhmm.read_ft_data(directory_path)
 
 def load_analysis_dictionaries(control_pickle_path, null_means_dict_path, null_stds_dict_path, metadata_path=None):
     """

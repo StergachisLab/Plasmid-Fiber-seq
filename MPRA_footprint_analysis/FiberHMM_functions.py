@@ -6,7 +6,10 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 import sys
 import ast
-import tqdm.notebook
+try:
+    import tqdm.notebook as tqdm
+except ImportError:
+    import tqdm
 from scipy.ndimage import gaussian_filter1d
 
 def blocks_to_array(row):

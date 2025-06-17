@@ -66,8 +66,8 @@ def grab_circular_reads(input_df, ref_seq_length):
     Process a bed DataFrame to create an expanded footprint DataFrame,
     handling circular reads that wrap around the reference sequence.
     
-    Note: This is a placeholder function that should be implemented 
-    based on the FiberHMM_functions module referenced in the original script.
+    This is a wrapper around the FiberHMM_functions.grab_circular_reads function
+    to match the expected interface.
     
     Parameters:
     -----------
@@ -81,15 +81,23 @@ def grab_circular_reads(input_df, ref_seq_length):
     pandas.DataFrame
         The expanded footprint DataFrame with circular reads
     """
-    # Implementation required based on FiberHMM_functions.py
-    raise NotImplementedError("This function needs to be implemented based on FiberHMM_functions module")
+    # Ensure FiberHMM_functions is available
+    from .fiberhmm_integration import ensure_fiberhmm_in_path
+    ensure_fiberhmm_in_path()
+    
+    # Import the actual function from FiberHMM_functions
+    import FiberHMM_functions as fhmm
+    
+    # The FiberHMM function expects (sample_name, ref_seq_length, number_of_reads=None)
+    # but our interface passes (input_df, ref_seq_length)
+    # So we need to adapt the call:
+    return fhmm.grab_circular_reads(input_df, ref_seq_length, number_of_reads=None)
 
 def prep_dfs_for_subtraction(circular_footprint_df):
     """
     Transform expanded footprint dataframe into count of footprint sizes dataframe.
     
-    Note: This is a placeholder function that should be implemented 
-    based on the FiberHMM_functions module referenced in the original script.
+    This is a wrapper around the FiberHMM_functions.prep_dfs_for_subtraction function.
     
     Parameters:
     -----------
@@ -101,15 +109,22 @@ def prep_dfs_for_subtraction(circular_footprint_df):
     list of pandas.DataFrame
         A list containing the count of footprint sizes DataFrame
     """
-    # Implementation required based on FiberHMM_functions.py
-    raise NotImplementedError("This function needs to be implemented based on FiberHMM_functions module")
+    # Ensure FiberHMM_functions is available
+    from .fiberhmm_integration import ensure_fiberhmm_in_path
+    ensure_fiberhmm_in_path()
+    
+    # Import the actual function from FiberHMM_functions
+    import FiberHMM_functions as fhmm
+    
+    # The FiberHMM function expects (*dataframes) and returns a list
+    # Our interface expects a single DataFrame and returns a list
+    return fhmm.prep_dfs_for_subtraction(circular_footprint_df)
 
 def filter_fp_df(footprint_df, bin_size, row_range, col_range):
     """
     Filter footprint_count_dfs for desired footprint sizes and positions.
     
-    Note: This is a placeholder function that should be implemented 
-    based on the FiberHMM_functions module referenced in the original script.
+    This is a wrapper around the FiberHMM_functions.filter_fp_df function.
     
     Parameters:
     -----------
@@ -127,8 +142,15 @@ def filter_fp_df(footprint_df, bin_size, row_range, col_range):
     pandas.DataFrame
         The filtered footprint count DataFrame
     """
-    # Implementation required based on FiberHMM_functions.py
-    raise NotImplementedError("This function needs to be implemented based on FiberHMM_functions module")
+    # Ensure FiberHMM_functions is available
+    from .fiberhmm_integration import ensure_fiberhmm_in_path
+    ensure_fiberhmm_in_path()
+    
+    # Import the actual function from FiberHMM_functions
+    import FiberHMM_functions as fhmm
+    
+    # The function signatures match, so we can call directly
+    return fhmm.filter_fp_df(footprint_df, bin_size, row_range, col_range)
 
 # Function to process a single sample for multiprocessing
 def process_single_sample(sample_data, control_df, null_means_dict, null_stds_dict, 
