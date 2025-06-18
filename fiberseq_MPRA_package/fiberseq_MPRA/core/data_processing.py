@@ -83,7 +83,7 @@ def grab_circular_reads(input_df, ref_seq_length):
     """
     # Ensure FiberHMM_functions is available
     from .fiberhmm_integration import ensure_fiberhmm_in_path
-    ensure_fiberhmm_in_path()
+    ensure_fiberhmm_in_path(verbose=False)
     
     # Import the actual function from FiberHMM_functions
     import FiberHMM_functions as fhmm
@@ -111,7 +111,7 @@ def prep_dfs_for_subtraction(circular_footprint_df):
     """
     # Ensure FiberHMM_functions is available
     from .fiberhmm_integration import ensure_fiberhmm_in_path
-    ensure_fiberhmm_in_path()
+    ensure_fiberhmm_in_path(verbose=False)
     
     # Import the actual function from FiberHMM_functions
     import FiberHMM_functions as fhmm
@@ -144,7 +144,7 @@ def filter_fp_df(footprint_df, bin_size, row_range, col_range):
     """
     # Ensure FiberHMM_functions is available
     from .fiberhmm_integration import ensure_fiberhmm_in_path
-    ensure_fiberhmm_in_path()
+    ensure_fiberhmm_in_path(verbose=False)
     
     # Import the actual function from FiberHMM_functions
     import FiberHMM_functions as fhmm

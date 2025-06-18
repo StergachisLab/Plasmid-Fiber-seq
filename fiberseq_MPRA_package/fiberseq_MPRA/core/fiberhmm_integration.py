@@ -9,7 +9,7 @@ and the FiberHMM_functions module.
 import sys
 import os
 
-def ensure_fiberhmm_in_path():
+def ensure_fiberhmm_in_path(verbose=True):
     """
     Ensure FiberHMM_functions is available for import.
     This function should be called before importing FiberHMM_functions.
@@ -30,7 +30,8 @@ def ensure_fiberhmm_in_path():
         if os.path.exists(fiberhmm_path):
             if location not in sys.path:
                 sys.path.insert(0, location)
-            print(f"Found FiberHMM_functions.py at: {fiberhmm_path}")
+            if verbose:
+                print(f"Found FiberHMM_functions.py at: {fiberhmm_path}")
             return True
     
     # If not found, raise an informative error

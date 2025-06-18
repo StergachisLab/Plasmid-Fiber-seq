@@ -9,7 +9,7 @@ __version__ = '1.0.0'
 # Try to ensure FiberHMM_functions is available, but don't fail if it's not
 try:
     from .core.fiberhmm_integration import ensure_fiberhmm_in_path
-    ensure_fiberhmm_in_path()
+    ensure_fiberhmm_in_path(verbose=False)
     print("FiberHMM integration initialized successfully")
 except ImportError:
     # This is expected during testing - FiberHMM_functions might not be available
