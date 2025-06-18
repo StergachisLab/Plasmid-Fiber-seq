@@ -1,2 +1,2 @@
 # Plasmid-Fiber-seq
-Scripts and data used for analysis of plasmid Fiber-seq 
+Scripts and data used for plasmid Fiber-seq 
