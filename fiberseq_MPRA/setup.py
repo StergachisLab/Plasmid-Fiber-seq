@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="footprint_analysis",
+    name="fiberseq_MPRA",
     version="1.0.0",
     packages=find_packages(),
     description="A package for SNP footprint analysis with multiprocessing support",
@@ -13,12 +13,14 @@ setup(
         "matplotlib>=3.3.0",
         "seaborn>=0.11.0",
         "scipy>=1.7.0",
-        "tqdm>=4.60.0",  # Required by FiberHMM_functions
+        "tqdm>=4.60.0",
     ],
     python_requires=">=3.6",
     entry_points={
         "console_scripts": [
-            "footprint-analysis=footprint_analysis.main:main",
+            "fiberseq-mpra=fiberseq_MPRA.main:main",
+            "fiberseq-generate-control=fiberseq_MPRA.preprocessing.control_generator:main",
+            "fiberseq-generate-null=fiberseq_MPRA.preprocessing.null_generator:main",
         ],
     },
 )

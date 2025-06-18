@@ -54,8 +54,8 @@ def compare_samples(sample_directory_path, control_pickle_path,
     dictionary mapping sample names to tuples of (WT_pvalue, Var_pvalue) DataFrames
     """
     # Import required modules
-    from footprint_analysis.core.file_io import load_analysis_dictionaries
-    from footprint_analysis.core.data_processing import compare_samples_with_dictionaries
+    from fiberseq_MPRA.core.file_io import load_analysis_dictionaries
+    from fiberseq_MPRA.core.data_processing import compare_samples_with_dictionaries
     
     # Load all required data
     control_df, null_means_dict, null_stds_dict = load_analysis_dictionaries(
@@ -158,8 +158,8 @@ def process_and_plot_grouped_samples(
     import multiprocessing as mp
     import time
     
-    from footprint_analysis.core.file_io import read_values_from_tsv, parse_bed_filename, count_bed_file_rows
-    from footprint_analysis.visualization.plots import plot_position_group, plot_position_groups_sequential
+    from fiberseq_MPRA.core.file_io import read_values_from_tsv, parse_bed_filename, count_bed_file_rows
+    from fiberseq_MPRA.visualization.plots import plot_position_group, plot_position_groups_sequential
     
     # Create output directory if it doesn't exist
     os.makedirs(output_directory, exist_ok=True)

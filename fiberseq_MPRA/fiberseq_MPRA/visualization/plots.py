@@ -16,7 +16,7 @@ import numpy as np
 import multiprocessing as mp
 from functools import partial
 
-from footprint_analysis.core.file_io import format_sample_name
+from fiberseq_MPRA.core.file_io import format_sample_name
 
 def plot_fp_heatmap(df, vmin=None, vmax=None, cmap="viridis", title="", xticks=0, 
                    output_directory=None, legend_label=None, snp_position=None, 

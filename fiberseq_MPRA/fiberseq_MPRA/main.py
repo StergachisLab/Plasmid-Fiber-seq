@@ -85,7 +85,7 @@ def main():
     args = parse_arguments()
     
     # Import the process_and_plot_grouped_samples function
-    from footprint_analysis.utils.helpers import process_and_plot_grouped_samples
+    from fiberseq_MPRA.utils.helpers import process_and_plot_grouped_samples
     
     # Set plot_index based on --plot-wt flag
     plot_index = 0 if args.plot_wt else 1

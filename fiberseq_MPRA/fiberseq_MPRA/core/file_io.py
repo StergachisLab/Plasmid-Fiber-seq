@@ -306,6 +306,9 @@ def read_values_from_tsv(tsv_file_path):
                             pval_str = f", P-value={pvalue}" if pvalue is not None else ""
                             print(f"  Row {line_count}: Pos={position}, Ref={ref_base}, Alt={alt_base}, Value={log2_fc}{pval_str}")
                         
+                    except (ValueError, TypeError):
+                        # Skip invalid rows
+                        continue
             print(f"Successfully read {len(value_dict)} entries from TSV file")
             return value_dict
         

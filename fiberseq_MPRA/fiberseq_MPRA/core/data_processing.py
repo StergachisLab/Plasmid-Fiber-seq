@@ -199,7 +199,7 @@ def process_single_sample(sample_data, control_df, null_means_dict, null_stds_di
         Var_enrichment = processed_count_df - control_df  # Positive where Var is enriched
 
         # Import the statistics module for calculating p-values
-        from footprint_analysis.analysis.statistics import calculate_pvalues_one_tailed_dict
+        from fiberseq_MPRA.analysis.statistics import calculate_pvalues_one_tailed_dict
 
         # Convert enrichment values to -log10(p-values)
         print(f"  Calculating p-values for {sample_name}...")
@@ -254,7 +254,7 @@ def compare_samples_sequential(sample_directory_path, control_df, null_means_dic
     dictionary mapping sample names to tuples of (WT_pvalue, Var_pvalue) DataFrames
     """
     # Import the file I/O module
-    from footprint_analysis.core.file_io import read_ft_data
+    from fiberseq_MPRA.core.file_io import read_ft_data
     
     # Setup dictionary to store processed dataframes
     pvalue_df_dict = {}
@@ -275,7 +275,7 @@ def compare_samples_sequential(sample_directory_path, control_df, null_means_dic
             Var_enrichment = processed_count_df - control_df  # Positive where Var is enriched
 
             # Import the statistics module
-            from footprint_analysis.analysis.statistics import calculate_pvalues_one_tailed_dict
+            from fiberseq_MPRA.analysis.statistics import calculate_pvalues_one_tailed_dict
 
             # Convert enrichment values to -log10(p-values)
             print(f"  Calculating p-values for {sample_name}...")
@@ -337,7 +337,7 @@ def compare_samples_with_dictionaries(sample_directory_path, control_df, null_me
     dictionary mapping sample names to tuples of (WT_pvalue, Var_pvalue) DataFrames
     """
     # Import the file I/O module
-    from footprint_analysis.core.file_io import read_ft_data
+    from fiberseq_MPRA.core.file_io import read_ft_data
     
     # Read the sample dataframes first
     bed_dict = read_ft_data(sample_directory_path)
